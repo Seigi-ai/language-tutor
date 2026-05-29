@@ -181,14 +181,14 @@ input.field:focus { border-color:var(--accent); }
 </div>
 
 <script>
-// ── LANGUAGES (With Dynamic English-Switching Prompts) ─────────────────────
+// ── LANGUAGES (Dynamic Routing Prompts) ────────────────────────────────────
 const LANGS = {
   japanese: {
     name:'Japanese', native:'日本語', flag:'🇯🇵',
     prompt:`You are Hana, a warm Japanese language tutor.
 Dynamic Flow Rules:
 - If the user speaks to you in English: Respond completely in English. Use this mode to explain Japanese concepts, translate phrases, or answer their questions clearly.
-- If the user speaks to you in Japanese: Respond completely in natural Japanese (1–2 sentences max) to maintain the conversational immersion.
+- If the user speaks to you in Japanese: Respond completely in natural Japanese (1–2 sentences max) to maintain conversational immersion.
 - If they make a clear grammatical error in Japanese, append a new line: ✏️ [brief English correction]`
   },
   french: {
@@ -196,7 +196,7 @@ Dynamic Flow Rules:
     prompt:`You are Léa, a warm French language tutor.
 Dynamic Flow Rules:
 - If the user speaks to you in English: Respond completely in English. Use this mode to explain French concepts, translate phrases, or answer their questions clearly.
-- If the user speaks to you in French: Respond completely in natural French (1–2 sentences max) to maintain the conversational immersion.
+- If the user speaks to you in French: Respond completely in natural French (1–2 sentences max) to maintain conversational immersion.
 - If they make a clear grammatical error in French, append a new line: ✏️ [brief English correction]`
   },
   spanish: {
@@ -204,7 +204,7 @@ Dynamic Flow Rules:
     prompt:`You are Sofía, a warm Spanish language tutor.
 Dynamic Flow Rules:
 - If the user speaks to you in English: Respond completely in English. Use this mode to explain Spanish concepts, translate phrases, or answer their questions clearly.
-- If the user speaks to you in Spanish: Respond completely in natural Spanish (1–2 sentences max) to maintain the conversational immersion.
+- If the user speaks to you in Spanish: Respond completely in natural Spanish (1–2 sentences max) to maintain conversational immersion.
 - If they make a clear grammatical error in Spanish, append a new line: ✏️ [brief English correction]`
   },
   chinese: {
@@ -212,7 +212,7 @@ Dynamic Flow Rules:
     prompt:`You are Wei, a warm Mandarin language tutor.
 Dynamic Flow Rules:
 - If the user speaks to you in English: Respond completely in English. Use this mode to explain Mandarin concepts, translate characters, or answer their questions clearly.
-- If the user speaks to you in Mandarin: Respond completely in natural Mandarin (1–2 sentences max) to maintain the conversational immersion.
+- If the user speaks to you in Mandarin: Respond completely in natural Mandarin (1–2 sentences max) to maintain conversational immersion.
 - If they make a clear error in Mandarin, append a new line: ✏️ [brief English correction with pinyin]`
   },
 };
@@ -288,6 +288,9 @@ function switchLang(k) {
   curLang = k; buildBar();
   $('native-text').textContent = LANGS[k].native;
   clearTranscript();
+  
+  // Reset timelines cleanly on channel changes
+  playAt = 0; 
   if (ws) { ws.close(); ws = null; }
   connect();
 }
@@ -330,7 +333,11 @@ function appendAi(text) {
   $('transcript').scrollTop = $('transcript').scrollHeight;
 }
 
-function endAiMsg() { curAiEl = null; playAt = 0; }
+function endAiMsg() { 
+  curAiEl = null; 
+  // FIX: Wiping playAt = 0 here broke the echo guard while chunks were playing.
+  // We now let playAt organically expire as the browser context audio clocks forward.
+}
 
 // ── WEBSOCKET ──────────────────────────────────────────────────────────────
 function connect() {
@@ -366,7 +373,6 @@ function connect() {
     const sc = msg.serverContent;
     if (!sc) return;
 
-    // Audio/text parts from model
     if (sc.modelTurn?.parts) {
       for (const p of sc.modelTurn.parts) {
         if (p.text) appendAi(p.text);
@@ -374,7 +380,6 @@ function connect() {
       }
     }
 
-    // Input transcription (what user said)
     if (sc.inputTranscription?.text) {
       addMsg('user', sc.inputTranscription.text);
     }
@@ -413,19 +418,32 @@ async function startMic() {
   }
   if (inCtx.state === 'suspended') await inCtx.resume();
 
-  micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  // FIX: Request explicit hardware/OS echo cancellation and noise suppression loops
+  micStream = await navigator.mediaDevices.getUserMedia({ 
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    }, 
+    video: false 
+  });
+  
   src = inCtx.createMediaStreamSource(micStream);
   worklet = new AudioWorkletNode(inCtx, 'pcm-proc');
 
-  // Silent output node to keep graph active
   const silent = inCtx.createGain(); silent.gain.value = 0;
   src.connect(worklet); worklet.connect(silent); silent.connect(inCtx.destination);
 
   worklet.port.onmessage = ev => {
     if (!ws || ws.readyState !== 1 || !wsReady) return;
     
-    // ── ECHO & STT HALLUCINATION FIX ──
-    // Drop mic data frames if the AI speaker buffer timeline extends into the future
+    // Safety lock against sleeping OS audio trees
+    if (inCtx.state === 'suspended') inCtx.resume();
+    if (outCtx && outCtx.state === 'suspended') outCtx.resume();
+
+    // ── FIXED TIMELOCK ACCURACY ──
+    // Because playAt is no longer killed early, this guard remains completely intact
+    // until the last speaker buffer physically runs dry.
     if (outCtx && outCtx.currentTime < playAt) {
       return;
     }
@@ -446,6 +464,7 @@ async function toggleMic() {
   const btn = $('mic-btn'), lbl = $('mic-label');
   if (micOn) {
     micOn = false; stopMic();
+    playAt = 0; // Clear playing queue timelines upon manual mute
     btn.classList.remove('active');
     lbl.textContent = 'tap to speak'; lbl.className = 'mic-label';
   } else {
