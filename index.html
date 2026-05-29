@@ -25,7 +25,6 @@
 html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text);
   font-family:'Space Mono',monospace; font-size:13px; }
 
-/* ── SETUP ── */
 #setup {
   position:fixed; inset:0; display:flex; align-items:center;
   justify-content:center; padding:28px; background:var(--bg); z-index:100;
@@ -52,7 +51,6 @@ input.field:focus { border-color:var(--accent); }
 }
 .primary-btn:active { opacity:.8; }
 
-/* ── MAIN APP ── */
 #app { height:100%; display:flex; flex-direction:column; }
 
 .header {
@@ -181,45 +179,39 @@ input.field:focus { border-color:var(--accent); }
 </div>
 
 <script>
-// ── LANGUAGES (Dynamic Routing Prompts) ────────────────────────────────────
 const LANGS = {
   japanese: {
     name:'Japanese', native:'日本語', flag:'🇯🇵',
     prompt:`You are Hana, a warm Japanese language tutor.
-Dynamic Flow Rules:
-- If the user speaks to you in English: Respond completely in English. Use this mode to explain Japanese concepts, translate phrases, or answer their questions clearly.
-- If the user speaks to you in Japanese: Respond completely in natural Japanese (1–2 sentences max) to maintain conversational immersion.
-- If they make a clear grammatical error in Japanese, append a new line: ✏️ [brief English correction]`
+- If the user speaks English: respond in English to explain concepts or translate.
+- If the user speaks Japanese: respond in natural Japanese, 1-2 sentences max.
+- If they make a grammar mistake in Japanese, add a new line: ✏️ [brief English correction]`
   },
   french: {
     name:'French', native:'Français', flag:'🇫🇷',
     prompt:`You are Léa, a warm French language tutor.
-Dynamic Flow Rules:
-- If the user speaks to you in English: Respond completely in English. Use this mode to explain French concepts, translate phrases, or answer their questions clearly.
-- If the user speaks to you in French: Respond completely in natural French (1–2 sentences max) to maintain conversational immersion.
-- If they make a clear grammatical error in French, append a new line: ✏️ [brief English correction]`
+- If the user speaks English: respond in English to explain concepts or translate.
+- If the user speaks French: respond in natural French, 1-2 sentences max.
+- If they make a grammar mistake in French, add a new line: ✏️ [brief English correction]`
   },
   spanish: {
     name:'Spanish', native:'Español', flag:'🇪🇸',
     prompt:`You are Sofía, a warm Spanish language tutor.
-Dynamic Flow Rules:
-- If the user speaks to you in English: Respond completely in English. Use this mode to explain Spanish concepts, translate phrases, or answer their questions clearly.
-- If the user speaks to you in Spanish: Respond completely in natural Spanish (1–2 sentences max) to maintain conversational immersion.
-- If they make a clear grammatical error in Spanish, append a new line: ✏️ [brief English correction]`
+- If the user speaks English: respond in English to explain concepts or translate.
+- If the user speaks Spanish: respond in natural Spanish, 1-2 sentences max.
+- If they make a grammar mistake in Spanish, add a new line: ✏️ [brief English correction]`
   },
   chinese: {
     name:'Chinese', native:'中文', flag:'🇨🇳',
     prompt:`You are Wei, a warm Mandarin language tutor.
-Dynamic Flow Rules:
-- If the user speaks to you in English: Respond completely in English. Use this mode to explain Mandarin concepts, translate characters, or answer their questions clearly.
-- If the user speaks to you in Mandarin: Respond completely in natural Mandarin (1–2 sentences max) to maintain conversational immersion.
-- If they make a clear error in Mandarin, append a new line: ✏️ [brief English correction with pinyin]`
+- If the user speaks English: respond in English to explain concepts or translate.
+- If the user speaks Mandarin: respond in natural Mandarin, 1-2 sentences max.
+- If they make an error, add a new line: ✏️ [brief English correction with pinyin]`
   },
 };
 
 const MODEL = 'models/gemini-3.1-flash-live-preview';
 
-// ── AUDIO WORKLET (PCM16 capture) ──────────────────────────────────────────
 const WORKLET = `
 class PCMProcessor extends AudioWorkletProcessor {
   process(inputs) {
@@ -238,7 +230,6 @@ class PCMProcessor extends AudioWorkletProcessor {
 registerProcessor('pcm-proc', PCMProcessor);
 `;
 
-// ── HELPERS ────────────────────────────────────────────────────────────────
 const buf2b64 = buf => {
   let s = ''; const u = new Uint8Array(buf);
   for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]);
@@ -256,22 +247,19 @@ const i16toF32 = i16 => {
   return f;
 };
 
-// ── STATE ──────────────────────────────────────────────────────────────────
 let apiKey = '', ws = null, inCtx = null, outCtx = null;
 let micStream = null, worklet = null, src = null;
-let micOn = false, wsReady = false, playAt = 0;
+let micOn = false, wsReady = false, playAt = 0, pendingReconnect = false;
 let curLang = 'japanese', curAiEl = null;
 
 const $ = id => document.getElementById(id);
 
-// ── STATUS ─────────────────────────────────────────────────────────────────
 function setStatus(state, label) {
   const dot = $('dot'), txt = $('status-text');
   dot.className = 'dot' + (state ? ' '+state : '');
   txt.textContent = label;
 }
 
-// ── LANG BAR ──────────────────────────────────────────────────────────────
 function buildBar() {
   const bar = $('lang-bar'); bar.innerHTML = '';
   Object.entries(LANGS).forEach(([k, l]) => {
@@ -286,16 +274,13 @@ function buildBar() {
 function switchLang(k) {
   if (k === curLang) return;
   curLang = k; buildBar();
-  $('native-text').textContent = LANGS[k].native;
-  clearTranscript();
-  
-  // Reset timelines cleanly on channel changes
-  playAt = 0; 
-  if (ws) { ws.close(); ws = null; }
-  connect();
+  const nt = $('native-text'); if (nt) nt.textContent = LANGS[k].native;
+  clearTranscript(); playAt = 0;
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    pendingReconnect = true; ws.close();
+  } else { ws = null; connect(); }
 }
 
-// ── TRANSCRIPT ─────────────────────────────────────────────────────────────
 function clearTranscript() {
   const t = $('transcript'); t.innerHTML = '';
   const ph = document.createElement('div'); ph.className = 'placeholder'; ph.id = 'placeholder';
@@ -333,13 +318,8 @@ function appendAi(text) {
   $('transcript').scrollTop = $('transcript').scrollHeight;
 }
 
-function endAiMsg() { 
-  curAiEl = null; 
-  // FIX: Wiping playAt = 0 here broke the echo guard while chunks were playing.
-  // We now let playAt organically expire as the browser context audio clocks forward.
-}
+function endAiMsg() { curAiEl = null; }
 
-// ── WEBSOCKET ──────────────────────────────────────────────────────────────
 function connect() {
   setStatus('connecting', 'connecting…');
   const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`;
@@ -355,7 +335,6 @@ function connect() {
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } }
         },
         inputAudioTranscription: {},
-        outputAudioTranscription: {},
         systemInstruction: { parts: [{ text: LANGS[curLang].prompt }] }
       }
     }));
@@ -368,48 +347,52 @@ function connect() {
       msg = JSON.parse(raw);
     } catch { return; }
 
-    if (msg.setupComplete) { wsReady = true; setStatus('ok', 'connected'); return; }
+    try {
+      if (msg.setupComplete) { wsReady = true; setStatus('ok', 'connected'); return; }
 
-    const sc = msg.serverContent;
-    if (!sc) return;
+      const sc = msg.serverContent;
+      if (!sc) return;
 
-    if (sc.modelTurn?.parts) {
-      for (const p of sc.modelTurn.parts) {
-        if (p.text) appendAi(p.text);
-        if (p.inlineData?.mimeType?.startsWith('audio/pcm')) playChunk(p.inlineData.data);
+      if (sc.modelTurn?.parts) {
+        for (const p of sc.modelTurn.parts) {
+          if (p.text) appendAi(p.text);
+          if (p.inlineData?.mimeType?.startsWith('audio/pcm')) playChunk(p.inlineData.data);
+        }
       }
-    }
 
-    if (sc.inputTranscription?.text) {
-      addMsg('user', sc.inputTranscription.text);
-    }
-
-    if (sc.turnComplete) endAiMsg();
+      if (sc.inputTranscription?.text) addMsg('user', sc.inputTranscription.text);
+      if (sc.turnComplete) endAiMsg();
+    } catch(err) { console.error('msg handler error:', err); }
   };
 
   ws.onerror = () => setStatus('err', 'error');
-  ws.onclose = (e) => { wsReady = false; setStatus('err', 'disconnected: ' + (e.reason || e.code || 'unknown')); };
+  ws.onclose = (e) => {
+    wsReady = false;
+    const reason = e.reason || ('code:' + e.code) || 'unknown';
+    setStatus('err', 'disconnected: ' + reason);
+    if (pendingReconnect) { pendingReconnect = false; setTimeout(connect, 300); }
+  };
 }
 
-// ── AUDIO PLAYBACK ─────────────────────────────────────────────────────────
 function ensureOut() {
   if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
   if (outCtx.state === 'suspended') outCtx.resume();
 }
 
 function playChunk(b64) {
-  ensureOut();
-  const f32 = i16toF32(b64toI16(b64));
-  const buf = outCtx.createBuffer(1, f32.length, 24000);
-  buf.getChannelData(0).set(f32);
-  const src2 = outCtx.createBufferSource();
-  src2.buffer = buf; src2.connect(outCtx.destination);
-  const now = outCtx.currentTime;
-  const t = Math.max(now, playAt);
-  src2.start(t); playAt = t + buf.duration;
+  try {
+    ensureOut();
+    const f32 = i16toF32(b64toI16(b64));
+    const buf = outCtx.createBuffer(1, f32.length, 24000);
+    buf.getChannelData(0).set(f32);
+    const src2 = outCtx.createBufferSource();
+    src2.buffer = buf; src2.connect(outCtx.destination);
+    const now = outCtx.currentTime;
+    const t = Math.max(now, playAt);
+    src2.start(t); playAt = t + buf.duration;
+  } catch(e) { console.error('playChunk error:', e); }
 }
 
-// ── MICROPHONE ─────────────────────────────────────────────────────────────
 async function startMic() {
   if (!inCtx) {
     inCtx = new AudioContext({ sampleRate: 16000 });
@@ -418,36 +401,21 @@ async function startMic() {
   }
   if (inCtx.state === 'suspended') await inCtx.resume();
 
-  // FIX: Request explicit hardware/OS echo cancellation and noise suppression loops
-  micStream = await navigator.mediaDevices.getUserMedia({ 
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true
-    }, 
-    video: false 
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: false
   });
-  
+
   src = inCtx.createMediaStreamSource(micStream);
   worklet = new AudioWorkletNode(inCtx, 'pcm-proc');
-
   const silent = inCtx.createGain(); silent.gain.value = 0;
   src.connect(worklet); worklet.connect(silent); silent.connect(inCtx.destination);
 
   worklet.port.onmessage = ev => {
     if (!ws || ws.readyState !== 1 || !wsReady) return;
-    
-    // Safety lock against sleeping OS audio trees
     if (inCtx.state === 'suspended') inCtx.resume();
     if (outCtx && outCtx.state === 'suspended') outCtx.resume();
-
-    // ── FIXED TIMELOCK ACCURACY ──
-    // Because playAt is no longer killed early, this guard remains completely intact
-    // until the last speaker buffer physically runs dry.
-    if (outCtx && outCtx.currentTime < playAt) {
-      return;
-    }
-
+    if (outCtx && outCtx.currentTime < playAt) return;
     ws.send(JSON.stringify({
       realtimeInput: { audio: { data: buf2b64(ev.data), mimeType: 'audio/pcm;rate=16000' } }
     }));
@@ -463,8 +431,7 @@ function stopMic() {
 async function toggleMic() {
   const btn = $('mic-btn'), lbl = $('mic-label');
   if (micOn) {
-    micOn = false; stopMic();
-    playAt = 0; // Clear playing queue timelines upon manual mute
+    micOn = false; stopMic(); playAt = 0;
     btn.classList.remove('active');
     lbl.textContent = 'tap to speak'; lbl.className = 'mic-label';
   } else {
@@ -479,7 +446,6 @@ async function toggleMic() {
   }
 }
 
-// ── INIT ───────────────────────────────────────────────────────────────────
 buildBar();
 $('mic-btn').onclick = toggleMic;
 
