@@ -439,7 +439,7 @@ async function startMic() {
   worklet.port.onmessage = ev => {
     if (!ws || ws.readyState !== 1 || !wsReady) return;
     ws.send(JSON.stringify({
-      realtimeInput: { mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: buf2b64(ev.data) }] }
+      realtimeInput: { audio: { data: buf2b64(ev.data), mimeType: 'audio/pcm;rate=16000' } }
     }));
   };
 }
