@@ -227,7 +227,7 @@ Rules:
   },
 };
 
-const MODEL = 'gemini-3.1-flash-live-preview';
+const MODEL = 'models/gemini-3.1-flash-live-preview';
 
 // ── AUDIO WORKLET (PCM16 capture) ──────────────────────────────────────────
 const WORKLET = `
@@ -269,7 +269,7 @@ const i16toF32 = i16 => {
 // ── STATE ──────────────────────────────────────────────────────────────────
 let apiKey = '', ws = null, inCtx = null, outCtx = null;
 let micStream = null, worklet = null, src = null;
-let micOn = false, wsReady = false, playAt = 0, pendingReconnect = false;
+let micOn = false, wsReady = false, playAt = 0;
 let curLang = 'japanese', curAiEl = null;
 
 const $ = id => document.getElementById(id);
@@ -296,14 +296,10 @@ function buildBar() {
 function switchLang(k) {
   if (k === curLang) return;
   curLang = k; buildBar();
-  const nt = $('native-text'); if (nt) nt.textContent = LANGS[k].native;
+  $('native-text').textContent = LANGS[k].native;
   clearTranscript();
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    pendingReconnect = true;
-    ws.close();
-  } else {
-    ws = null; connect();
-  }
+  if (ws) { ws.close(); ws = null; }
+  connect();
 }
 
 // ── TRANSCRIPT ─────────────────────────────────────────────────────────────
@@ -358,10 +354,11 @@ function connect() {
       setup: {
         model: MODEL,
         generationConfig: {
-          responseModalities: ['audio'],
+          responseModalities: ['AUDIO'],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } }
         },
         inputAudioTranscription: {},
+        outputAudioTranscription: {},
         systemInstruction: { parts: [{ text: LANGS[curLang].prompt }] }
       }
     }));
@@ -373,7 +370,6 @@ function connect() {
       const raw = typeof e.data === 'string' ? e.data : await e.data.text();
       msg = JSON.parse(raw);
     } catch { return; }
-    try {
 
     if (msg.setupComplete) { wsReady = true; setStatus('ok', 'connected'); return; }
 
@@ -399,16 +395,10 @@ function connect() {
     }
 
     if (sc.turnComplete) endAiMsg();
-    } catch(err) { console.error('msg handler error:', err); }
   };
 
   ws.onerror = () => setStatus('err', 'error');
-  ws.onclose = (e) => {
-    wsReady = false;
-    const reason = e.reason || ('code:' + e.code) || 'unknown';
-    setStatus('err', 'disconnected: ' + reason);
-    if (pendingReconnect) { pendingReconnect = false; setTimeout(connect, 300); }
-  };
+  ws.onclose = (e) => { wsReady = false; setStatus('err', 'disconnected: ' + (e.reason || e.code || 'unknown')); };
 }
 
 // ── AUDIO PLAYBACK ─────────────────────────────────────────────────────────
@@ -418,7 +408,6 @@ function ensureOut() {
 }
 
 function playChunk(b64) {
-  try {
   ensureOut();
   const f32 = i16toF32(b64toI16(b64));
   const buf = outCtx.createBuffer(1, f32.length, 24000);
@@ -428,7 +417,6 @@ function playChunk(b64) {
   const now = outCtx.currentTime;
   const t = Math.max(now, playAt);
   src2.start(t); playAt = t + buf.duration;
-  } catch(e) { console.error('playChunk error:', e); }
 }
 
 // ── MICROPHONE ─────────────────────────────────────────────────────────────
