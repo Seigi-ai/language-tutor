@@ -144,7 +144,6 @@ input.field:focus { border-color:var(--accent); }
 </head>
 <body>
 
-<!-- SETUP -->
 <div id="setup">
   <div class="card">
     <div class="big-title">言語</div>
@@ -156,7 +155,6 @@ input.field:focus { border-color:var(--accent); }
   </div>
 </div>
 
-<!-- APP -->
 <div id="app" style="display:none">
   <div class="header">
     <div class="header-left">
@@ -183,51 +181,39 @@ input.field:focus { border-color:var(--accent); }
 </div>
 
 <script>
-// ── LANGUAGES ──────────────────────────────────────────────────────────────
+// ── LANGUAGES (With Dynamic English-Switching Prompts) ─────────────────────
 const LANGS = {
   japanese: {
     name:'Japanese', native:'日本語', flag:'🇯🇵',
-    prompt:`You are Hana, a warm Japanese conversation partner.
-Rules:
-- Respond ONLY in Japanese (natural mix of hiragana, katakana, kanji).
-- Keep every response to 1–2 sentences max.
-- STRICT RULE: Do NOT include an English translation by default. Keep the conversation entirely in Japanese.
-- EXCEPTION: ONLY if the user explicitly expresses confusion, says they don't understand, or asks what a word means, add a new line explaining it: 📝 [english explanation/translation]
-- If the user makes a grammar mistake, add: ✏️ [brief correction in English]
-- Start by greeting the user warmly.`
+    prompt:`You are Hana, a warm Japanese language tutor.
+Dynamic Flow Rules:
+- If the user speaks to you in English: Respond completely in English. Use this mode to explain Japanese concepts, translate phrases, or answer their questions clearly.
+- If the user speaks to you in Japanese: Respond completely in natural Japanese (1–2 sentences max) to maintain the conversational immersion.
+- If they make a clear grammatical error in Japanese, append a new line: ✏️ [brief English correction]`
   },
   french: {
     name:'French', native:'Français', flag:'🇫🇷',
-    prompt:`You are Léa, a warm French conversation partner.
-Rules:
-- Respond ONLY in French.
-- Keep every response to 1–2 sentences max.
-- STRICT RULE: Do NOT include an English translation by default. Keep the conversation entirely in French.
-- EXCEPTION: ONLY if the user explicitly expresses confusion, says they don't understand, or asks what a word means, add a new line explaining it: 📝 [english explanation/translation]
-- If the user makes a grammar mistake, add: ✏️ [brief correction in English]
-- Start by greeting the user warmly.`
+    prompt:`You are Léa, a warm French language tutor.
+Dynamic Flow Rules:
+- If the user speaks to you in English: Respond completely in English. Use this mode to explain French concepts, translate phrases, or answer their questions clearly.
+- If the user speaks to you in French: Respond completely in natural French (1–2 sentences max) to maintain the conversational immersion.
+- If they make a clear grammatical error in French, append a new line: ✏️ [brief English correction]`
   },
   spanish: {
     name:'Spanish', native:'Español', flag:'🇪🇸',
-    prompt:`You are Sofía, a warm Spanish conversation partner.
-Rules:
-- Respond ONLY in Spanish.
-- Keep every response to 1–2 sentences max.
-- STRICT RULE: Do NOT include an English translation by default. Keep the conversation entirely in Spanish.
-- EXCEPTION: ONLY if the user explicitly expresses confusion, says they don't understand, or asks what a word means, add a new line explaining it: 📝 [english explanation/translation]
-- If the user makes a grammar mistake, add: ✏️ [brief correction in English]
-- Start by greeting the user warmly.`
+    prompt:`You are Sofía, a warm Spanish language tutor.
+Dynamic Flow Rules:
+- If the user speaks to you in English: Respond completely in English. Use this mode to explain Spanish concepts, translate phrases, or answer their questions clearly.
+- If the user speaks to you in Spanish: Respond completely in natural Spanish (1–2 sentences max) to maintain the conversational immersion.
+- If they make a clear grammatical error in Spanish, append a new line: ✏️ [brief English correction]`
   },
   chinese: {
     name:'Chinese', native:'中文', flag:'🇨🇳',
-    prompt:`You are Wei, a warm Mandarin conversation partner.
-Rules:
-- Respond ONLY in Mandarin (simplified characters).
-- Keep every response to 1–2 sentences max.
-- STRICT RULE: Do NOT include an English translation by default. Keep the conversation entirely in Mandarin.
-- EXCEPTION: ONLY if the user explicitly expresses confusion, says they don't understand, or asks what a word means, add a new line explaining it: 📝 [english explanation/translation] · [pinyin]
-- If the user makes a mistake, add: ✏️ [brief correction in English]
-- Start by greeting the user warmly.`
+    prompt:`You are Wei, a warm Mandarin language tutor.
+Dynamic Flow Rules:
+- If the user speaks to you in English: Respond completely in English. Use this mode to explain Mandarin concepts, translate characters, or answer their questions clearly.
+- If the user speaks to you in Mandarin: Respond completely in natural Mandarin (1–2 sentences max) to maintain the conversational immersion.
+- If they make a clear error in Mandarin, append a new line: ✏️ [brief English correction with pinyin]`
   },
 };
 
@@ -388,11 +374,6 @@ function connect() {
       }
     }
 
-    // Output transcription (what the AI said)
-    if (sc.outputTranscription?.text) {
-      // already shown via text parts; skip double-display
-    }
-
     // Input transcription (what user said)
     if (sc.inputTranscription?.text) {
       addMsg('user', sc.inputTranscription.text);
@@ -442,6 +423,13 @@ async function startMic() {
 
   worklet.port.onmessage = ev => {
     if (!ws || ws.readyState !== 1 || !wsReady) return;
+    
+    // ── ECHO & STT HALLUCINATION FIX ──
+    // Drop mic data frames if the AI speaker buffer timeline extends into the future
+    if (outCtx && outCtx.currentTime < playAt) {
+      return;
+    }
+
     ws.send(JSON.stringify({
       realtimeInput: { audio: { data: buf2b64(ev.data), mimeType: 'audio/pcm;rate=16000' } }
     }));
