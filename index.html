@@ -394,37 +394,52 @@ function playChunk(b64) {
 }
 
 async function startMic() {
-  if (!inCtx) {
-    inCtx = new AudioContext({ sampleRate: 16000 });
-    const blob = new Blob([WORKLET], { type: 'application/javascript' });
-    await inCtx.audioWorklet.addModule(URL.createObjectURL(blob));
-  }
-  if (inCtx.state === 'suspended') await inCtx.resume();
-
   micStream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     video: false
   });
 
+  const nativeSampleRate = 44100;
+  inCtx = new AudioContext({ sampleRate: nativeSampleRate });
+  if (inCtx.state === 'suspended') await inCtx.resume();
   src = inCtx.createMediaStreamSource(micStream);
-  worklet = new AudioWorkletNode(inCtx, 'pcm-proc');
-  const silent = inCtx.createGain(); silent.gain.value = 0;
-  src.connect(worklet); worklet.connect(silent); silent.connect(inCtx.destination);
 
-  worklet.port.onmessage = ev => {
+  const sendAudio = (float32Input) => {
     if (!ws || ws.readyState !== 1 || !wsReady) return;
-    if (inCtx.state === 'suspended') inCtx.resume();
     if (outCtx && outCtx.state === 'suspended') outCtx.resume();
     if (outCtx && outCtx.currentTime < playAt) return;
+    const ratio = nativeSampleRate / 16000;
+    const outLength = Math.floor(float32Input.length / ratio);
+    const i16 = new Int16Array(outLength);
+    for (let i = 0; i < outLength; i++) {
+      const s = Math.max(-1, Math.min(1, float32Input[Math.floor(i * ratio)]));
+      i16[i] = s < 0 ? s * 32768 : s * 32767;
+    }
     ws.send(JSON.stringify({
-      realtimeInput: { audio: { data: buf2b64(ev.data), mimeType: 'audio/pcm;rate=16000' } }
+      realtimeInput: { audio: { data: buf2b64(i16.buffer), mimeType: 'audio/pcm;rate=16000' } }
     }));
   };
+
+  // Try AudioWorklet first, fall back to ScriptProcessor
+  try {
+    const blob = new Blob([WORKLET], { type: 'application/javascript' });
+    await inCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+    worklet = new AudioWorkletNode(inCtx, 'pcm-proc');
+    worklet.port.onmessage = ev => sendAudio(new Float32Array(ev.data));
+    const silent = inCtx.createGain(); silent.gain.value = 0;
+    src.connect(worklet); worklet.connect(silent); silent.connect(inCtx.destination);
+  } catch {
+    console.warn('AudioWorklet failed, falling back to ScriptProcessor');
+    worklet = inCtx.createScriptProcessor(4096, 1, 1);
+    worklet.onaudioprocess = ev => sendAudio(ev.inputBuffer.getChannelData(0));
+    src.connect(worklet); worklet.connect(inCtx.destination);
+  }
 }
 
 function stopMic() {
-  if (src) { src.disconnect(); src = null; }
   if (worklet) { worklet.disconnect(); worklet = null; }
+  if (src) { src.disconnect(); src = null; }
+  if (inCtx) { inCtx.close(); inCtx = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 }
 
