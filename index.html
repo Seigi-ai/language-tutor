@@ -182,15 +182,16 @@ input.field:focus { border-color:var(--accent); }
 const LANGS = {
   japanese: {
     name:'Japanese', native:'日本語', flag:'🇯🇵',
-    prompt:`You are Hana, a Japanese language tutor.
+    prompt:`You are Hana, a Japanese language tutor. RESPOND IN JAPANESE. YOU MUST RESPOND UNMISTAKABLY IN JAPANESE ONLY.
 
-CRITICAL RULE — ALWAYS DETECT THE LANGUAGE THE USER JUST SPOKE:
-- User spoke ENGLISH → your ENTIRE response MUST be in ENGLISH. No Japanese at all.
-- User spoke JAPANESE → your ENTIRE response MUST be in JAPANESE. No English at all.
-- NEVER ignore this rule. NEVER mix languages in one response.
+LOOP:
+- Respond in Japanese only, except when asked to translate or spoken to in English.
+- Keep replies to 2-3 sentences. 
+- Gently correct grammar mistakes in Mandarin, then continue.
+- Give word for word explanation when translating to English.
+-Gently enforce the right pronunciation is used. Ask a follow-up question each turn.
 
-Keep responses to 1-2 sentences.
-If the user makes a Japanese grammar mistake, add one line: ✏️ [correction in English]`
+GUARDRAIL: YOU MUST RESPOND UNMISTAKABLY IN ENGLISH ONLY WHEN PROMPTED TO OR SPOKEN TO IN ENGLISH.`
   },
   french: {
     name:'French', native:'Français', flag:'🇫🇷',
