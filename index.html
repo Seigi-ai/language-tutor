@@ -391,6 +391,7 @@ function connect() {
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } } }
         },
         inputAudioTranscription: {},
+        outputAudioTranscription: {},
         systemInstruction: { parts: [{ text: LANGS[curLang].prompt }] }
       }
     }));
@@ -416,6 +417,7 @@ function connect() {
         }
       }
 
+      if (sc.outputTranscription?.text) appendAi(sc.outputTranscription.text);
       if (sc.inputTranscription?.text) addMsg('user', sc.inputTranscription.text);
       if (sc.turnComplete) endAiMsg();
     } catch(err) { console.error('msg handler error:', err); }
