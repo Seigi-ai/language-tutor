@@ -594,7 +594,7 @@ function stopMic() {
 async function toggleMic() {
   const btn = $('mic-btn'), lbl = $('mic-label');
   if (micOn) {
-    micOn = false; stopMic(); playAt = 0;
+    micOn = false; stopMic();
     btn.classList.remove('active');
     lbl.textContent = 'tap to speak'; lbl.className = 'mic-label';
   } else {
