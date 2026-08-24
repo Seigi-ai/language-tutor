@@ -20,11 +20,11 @@
   --green: #4ade80;
   --red: #f87171;
 }
-
+ 
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body { height:100%; overflow:hidden; background:var(--bg); color:var(--text);
   font-family:'Space Mono',monospace; font-size:13px; }
-
+ 
 #setup {
   position:fixed; inset:0; display:flex; align-items:center;
   justify-content:center; padding:28px; background:var(--bg); z-index:100;
@@ -50,9 +50,9 @@ input.field:focus { border-color:var(--accent); }
   letter-spacing:.05em; cursor:pointer; transition:opacity .2s;
 }
 .primary-btn:active { opacity:.8; }
-
+ 
 #app { height:100%; display:flex; flex-direction:column; }
-
+ 
 .header {
   display:flex; align-items:center; justify-content:space-between;
   padding:14px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
@@ -68,7 +68,7 @@ input.field:focus { border-color:var(--accent); }
 .dot.err { background:var(--red); }
 .dot.connecting { background:#facc15; animation:blink 1s ease-in-out infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-
+ 
 .lang-bar {
   display:flex; gap:8px; padding:12px 20px; overflow-x:auto;
   scrollbar-width:none; flex-shrink:0; border-bottom:1px solid var(--border);
@@ -81,7 +81,7 @@ input.field:focus { border-color:var(--accent); }
   cursor:pointer; white-space:nowrap; transition:all .2s; flex-shrink:0;
 }
 .lang-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-
+ 
 .transcript {
   flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column;
   gap:14px; scroll-behavior:smooth;
@@ -89,7 +89,7 @@ input.field:focus { border-color:var(--accent); }
 .transcript::-webkit-scrollbar { width:4px; }
 .transcript::-webkit-scrollbar-track { background:transparent; }
 .transcript::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
+ 
 .placeholder {
   flex:1; display:flex; flex-direction:column; align-items:center;
   justify-content:center; gap:10px; color:var(--dim); text-align:center;
@@ -98,7 +98,7 @@ input.field:focus { border-color:var(--accent); }
 .placeholder-native { font-family:'Shippori Mincho',serif; font-size:40px;
   color:rgba(139,124,247,.25); line-height:1; margin-bottom:4px; }
 .placeholder-hint { font-size:11px; letter-spacing:.05em; }
-
+ 
 .msg {
   max-width:88%; padding:11px 15px; border-radius:14px;
   line-height:1.65; font-size:13px; word-break:break-word;
@@ -110,12 +110,22 @@ input.field:focus { border-color:var(--accent); }
 .msg.ai { align-self:flex-start; background:var(--ai-bubble); border:1px solid var(--border); }
 .msg-who { font-size:9px; letter-spacing:.1em; text-transform:uppercase;
   color:var(--dim); margin-bottom:5px; }
-
+ 
+.replay-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  margin-left:8px; width:22px; height:22px; border-radius:50%;
+  border:1px solid var(--border); background:transparent; color:var(--dim);
+  font-size:11px; line-height:1; cursor:pointer; vertical-align:middle;
+  transition:all .15s;
+}
+.replay-btn:hover { border-color:var(--accent); color:var(--accent); }
+.replay-btn:active { opacity:.6; }
+ 
 .controls {
   padding:20px 20px 28px; display:flex; flex-direction:column;
   align-items:center; gap:10px; flex-shrink:0; border-top:1px solid var(--border);
 }
-
+ 
 .mic-btn {
   width:76px; height:76px; border-radius:50%;
   border:2px solid var(--accent); background:transparent;
@@ -135,13 +145,27 @@ input.field:focus { border-color:var(--accent); }
   border:1.5px solid rgba(139,124,247,.18); animation:ring 2s ease-out infinite .4s;
 }
 @keyframes ring { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1.3)} }
-
+ 
 .mic-label { font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--dim); }
 .mic-label.active { color:var(--accent); }
+ 
+.text-row { width:100%; display:flex; gap:8px; align-items:center; }
+.text-input {
+  flex:1; background:var(--card); border:1px solid var(--border); border-radius:20px;
+  padding:11px 16px; color:var(--text); font-family:'Space Mono',monospace; font-size:13px;
+  outline:none; transition:border-color .2s;
+}
+.text-input:focus { border-color:var(--accent); }
+.send-btn {
+  width:40px; height:40px; border-radius:50%; border:none; background:var(--accent);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; flex-shrink:0; transition:opacity .2s;
+}
+.send-btn:active { opacity:.8; }
 </style>
 </head>
 <body>
-
+ 
 <div id="setup">
   <div class="card">
     <div class="big-title">言語</div>
@@ -152,7 +176,7 @@ input.field:focus { border-color:var(--accent); }
     <button class="primary-btn" id="start-btn">Begin Session →</button>
   </div>
 </div>
-
+ 
 <div id="app" style="display:none">
   <div class="header">
     <div class="header-left">
@@ -168,6 +192,12 @@ input.field:focus { border-color:var(--accent); }
     </div>
   </div>
   <div class="controls">
+    <div class="text-row">
+      <input class="text-input" id="text-input" type="text" placeholder="or type a message…" autocomplete="off">
+      <button class="send-btn" id="send-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+      </button>
+    </div>
     <button class="mic-btn" id="mic-btn">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
         <rect x="9" y="2" width="6" height="11" rx="3"/>
@@ -177,24 +207,24 @@ input.field:focus { border-color:var(--accent); }
     <div class="mic-label" id="mic-label">tap to speak</div>
   </div>
 </div>
-
+ 
 <script>
 const LANGS = {
   japanese: {
     name:'Japanese', native:'日本語', flag:'🇯🇵',
     prompt:`You are Hana, a warm and encouraging Japanese language tutor.
-
+ 
 ONE-TIME: Greet the user in Japanese and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke JAPANESE → respond UNMISTAKABLY in JAPANESE only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct Japanese grammar mistakes gently, then continue.
@@ -204,18 +234,18 @@ LOOP:
   french: {
     name:'French', native:'Français', flag:'🇫🇷',
     prompt:`You are Léa, a friendly and patient French language tutor.
-
+ 
 ONE-TIME: Greet the user in French and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke FRENCH → respond UNMISTAKABLY in FRENCH only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct French grammar mistakes gently, then continue.
@@ -225,18 +255,18 @@ LOOP:
   spanish: {
     name:'Spanish', native:'Español', flag:'🇪🇸',
     prompt:`You are Sofía, an enthusiastic and encouraging Spanish language tutor.
-
+ 
 ONE-TIME: Greet the user in Spanish and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke SPANISH → respond UNMISTAKABLY in SPANISH only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct Spanish grammar mistakes gently, then continue.
@@ -246,18 +276,18 @@ LOOP:
   chinese: {
     name:'Chinese', native:'中文', flag:'🇨🇳',
     prompt:`You are Wei, a patient and supportive Mandarin Chinese language tutor.
-
+ 
 ONE-TIME: Greet the user in Mandarin and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke MANDARIN → respond UNMISTAKABLY in MANDARIN only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct Mandarin grammar mistakes gently, then continue.
@@ -269,16 +299,16 @@ LOOP:
     prompt:`You are Beatriz, a warm and expressive Brazilian Portuguese language tutor.
     
 ONE-TIME: Greet the user in Brazilian Portuguese and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke PORTUGUESE → respond UNMISTAKABLY in PORTUGUESE only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct Portuguese grammar mistakes gently, then continue.
@@ -288,18 +318,18 @@ LOOP:
   filipino: {
     name:'Filipino', native:'Filipino', flag:'🇵🇭',
     prompt:`You are Amihan, a cheerful and patient Filipino language tutor.
-
+ 
 ONE-TIME: Greet the user in Filipino and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke FILIPINO → respond UNMISTAKABLY in FILIPINO only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct Filipino grammar mistakes gently, then continue.
@@ -309,18 +339,18 @@ LOOP:
   dutch: {
     name:'Dutch', native:'Nederlands', flag:'🇳🇱',
     prompt:`You are Saskia, a direct and encouraging Dutch language tutor.
-
+ 
 ONE-TIME: Greet the user in Dutch and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke DUTCH → respond UNMISTAKABLY in DUTCH only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct Dutch grammar mistakes gently, then continue.
@@ -330,18 +360,18 @@ LOOP:
   german: {
     name:'German', native:'Deutsch', flag:'🇩🇪',
     prompt:`You are Lena, a clear and encouraging German language tutor.
-
+ 
 ONE-TIME: Greet the user in German and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke GERMAN → respond UNMISTAKABLY in GERMAN only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct German grammar mistakes gently, then continue.
@@ -351,18 +381,18 @@ LOOP:
   thai: {
     name:'Thai', native:'ภาษาไทย', flag:'🇹🇭',
     prompt:`You are Ploy, a friendly and patient Thai language tutor.
-
+ 
 ONE-TIME: Greet the user in Thai and ask what they want to practice today.
-
+ 
 LANGUAGE DETECTION — follow this every turn:
 - User spoke THAI → respond UNMISTAKABLY in THAI only.
 - User spoke ENGLISH → respond UNMISTAKABLY in ENGLISH only.
 - NEVER mix languages in one response.
-
+ 
 TRANSLATION — if user says anything like "translate", "what did you say", "I didn't understand", "please explain":
 - Translate your last response into English.
 - Break it down word for word: [word] = [meaning].
-
+ 
 LOOP:
 - Keep replies to 2-3 sentences.
 - Correct Thai grammar mistakes gently, then continue.
@@ -370,9 +400,9 @@ LOOP:
 - End every turn with a follow-up question.`
   },
 };
-
+ 
 const MODEL = 'models/gemini-3.1-flash-live-preview';
-
+ 
 const WORKLET = `
 class PCMProcessor extends AudioWorkletProcessor {
   process(inputs) {
@@ -390,7 +420,7 @@ class PCMProcessor extends AudioWorkletProcessor {
 }
 registerProcessor('pcm-proc', PCMProcessor);
 `;
-
+ 
 const buf2b64 = buf => {
   let s = ''; const u = new Uint8Array(buf);
   for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]);
@@ -407,20 +437,20 @@ const i16toF32 = i16 => {
   for (let i = 0; i < i16.length; i++) f[i] = i16[i] / 32768;
   return f;
 };
-
+ 
 let apiKey = '', ws = null, inCtx = null, outCtx = null;
 let micStream = null, worklet = null, src = null;
 let micOn = false, wsReady = false, playAt = 0, pendingReconnect = false;
-let curLang = 'japanese', curAiEl = null;
-
+let curLang = 'japanese', curAiEl = null, curAiChunks = [];
+ 
 const $ = id => document.getElementById(id);
-
+ 
 function setStatus(state, label) {
   const dot = $('dot'), txt = $('status-text');
   dot.className = 'dot' + (state ? ' '+state : '');
   txt.textContent = label;
 }
-
+ 
 function buildBar() {
   const bar = $('lang-bar'); bar.innerHTML = '';
   Object.entries(LANGS).forEach(([k, l]) => {
@@ -431,7 +461,7 @@ function buildBar() {
     bar.appendChild(b);
   });
 }
-
+ 
 function switchLang(k) {
   if (k === curLang) return;
   curLang = k; buildBar();
@@ -441,7 +471,7 @@ function switchLang(k) {
     pendingReconnect = true; ws.close();
   } else { ws = null; connect(); }
 }
-
+ 
 function clearTranscript() {
   const t = $('transcript'); t.innerHTML = '';
   const ph = document.createElement('div'); ph.className = 'placeholder'; ph.id = 'placeholder';
@@ -449,11 +479,11 @@ function clearTranscript() {
     <div class="placeholder-hint">tap the mic and start speaking</div>`;
   t.appendChild(ph); curAiEl = null;
 }
-
+ 
 function hidePH() {
   const ph = $('placeholder'); if (ph) ph.remove();
 }
-
+ 
 function addMsg(role, text) {
   if (!text.trim()) return;
   hidePH();
@@ -463,30 +493,34 @@ function addMsg(role, text) {
   d.innerHTML = `<div class="msg-who">${role === 'user' ? 'you' : LANGS[curLang].name + ' tutor'}</div>${text}`;
   t.appendChild(d); t.scrollTop = t.scrollHeight; return d;
 }
-
+ 
 function startAiMsg() {
   hidePH();
+  curAiChunks = [];
   const t = $('transcript');
   curAiEl = document.createElement('div');
   curAiEl.className = 'msg ai';
   curAiEl.innerHTML = `<div class="msg-who">${LANGS[curLang].name} tutor</div><span class="body"></span>`;
   t.appendChild(curAiEl); t.scrollTop = t.scrollHeight;
 }
-
+ 
 function appendAi(text) {
   if (!curAiEl) startAiMsg();
   curAiEl.querySelector('.body').textContent += text;
   $('transcript').scrollTop = $('transcript').scrollHeight;
 }
-
-function endAiMsg() { curAiEl = null; }
-
+ 
+function endAiMsg() {
+  if (curAiEl && curAiChunks.length) addReplayButton(curAiEl, curAiChunks.slice());
+  curAiEl = null; curAiChunks = [];
+}
+ 
 function connect() {
   setStatus('connecting', 'connecting…');
   const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`;
   ws = new WebSocket(url);
   wsReady = false;
-
+ 
   ws.onopen = () => {
     ws.send(JSON.stringify({
       setup: {
@@ -501,33 +535,37 @@ function connect() {
       }
     }));
   };
-
+ 
   ws.onmessage = async e => {
     let msg;
     try {
       const raw = typeof e.data === 'string' ? e.data : await e.data.text();
       msg = JSON.parse(raw);
     } catch { return; }
-
+ 
     try {
       if (msg.setupComplete) { wsReady = true; setStatus('ok', 'connected'); return; }
-
+ 
       const sc = msg.serverContent;
       if (!sc) return;
-
+ 
       if (sc.modelTurn?.parts) {
         for (const p of sc.modelTurn.parts) {
           if (p.text) appendAi(p.text);
-          if (p.inlineData?.mimeType?.startsWith('audio/pcm')) playChunk(p.inlineData.data);
+          if (p.inlineData?.mimeType?.startsWith('audio/pcm')) {
+            playChunk(p.inlineData.data);
+            if (!curAiEl) startAiMsg();
+            curAiChunks.push(p.inlineData.data);
+          }
         }
       }
-
+ 
       if (sc.outputTranscription?.text) appendAi(sc.outputTranscription.text);
       if (sc.inputTranscription?.text) addMsg('user', sc.inputTranscription.text);
       if (sc.turnComplete) endAiMsg();
     } catch(err) { console.error('msg handler error:', err); }
   };
-
+ 
   ws.onerror = () => setStatus('err', 'error');
   ws.onclose = (e) => {
     wsReady = false;
@@ -536,12 +574,12 @@ function connect() {
     if (pendingReconnect) { pendingReconnect = false; setTimeout(connect, 300); }
   };
 }
-
+ 
 function ensureOut() {
   if (!outCtx) outCtx = new AudioContext({ sampleRate: 24000 });
   if (outCtx.state === 'suspended') outCtx.resume();
 }
-
+ 
 function playChunk(b64) {
   try {
     ensureOut();
@@ -555,7 +593,31 @@ function playChunk(b64) {
     src2.start(t); playAt = t + buf.duration;
   } catch(e) { console.error('playChunk error:', e); }
 }
-
+ 
+function addReplayButton(el, chunks) {
+  const btn = document.createElement('button');
+  btn.className = 'replay-btn';
+  btn.title = 'Replay';
+  btn.textContent = '🔊';
+  btn.onclick = () => replayChunks(chunks);
+  el.appendChild(btn);
+}
+ 
+function replayChunks(chunks) {
+  try {
+    ensureOut();
+    let t = outCtx.currentTime;
+    chunks.forEach(b64 => {
+      const f32 = i16toF32(b64toI16(b64));
+      const buf = outCtx.createBuffer(1, f32.length, 24000);
+      buf.getChannelData(0).set(f32);
+      const s = outCtx.createBufferSource();
+      s.buffer = buf; s.connect(outCtx.destination);
+      s.start(t); t += buf.duration;
+    });
+  } catch(e) { console.error('replayChunks error:', e); }
+}
+ 
 async function startMic() {
   if (!inCtx) {
     inCtx = new AudioContext({ sampleRate: 16000 });
@@ -563,17 +625,17 @@ async function startMic() {
     await inCtx.audioWorklet.addModule(URL.createObjectURL(blob));
   }
   if (inCtx.state === 'suspended') await inCtx.resume();
-
+ 
   micStream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     video: false
   });
-
+ 
   src = inCtx.createMediaStreamSource(micStream);
   worklet = new AudioWorkletNode(inCtx, 'pcm-proc');
   const silent = inCtx.createGain(); silent.gain.value = 0;
   src.connect(worklet); worklet.connect(silent); silent.connect(inCtx.destination);
-
+ 
   worklet.port.onmessage = ev => {
     if (!ws || ws.readyState !== 1 || !wsReady) return;
     if (inCtx.state === 'suspended') inCtx.resume();
@@ -584,13 +646,13 @@ async function startMic() {
     }));
   };
 }
-
+ 
 function stopMic() {
   if (src) { src.disconnect(); src = null; }
   if (worklet) { worklet.disconnect(); worklet = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 }
-
+ 
 async function toggleMic() {
   const btn = $('mic-btn'), lbl = $('mic-label');
   if (micOn) {
@@ -608,15 +670,36 @@ async function toggleMic() {
     }
   }
 }
-
+ 
+function sendText() {
+  const input = $('text-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!ws || ws.readyState !== 1 || !wsReady) {
+    alert('Not connected yet — wait a moment and try again.');
+    return;
+  }
+  if (micOn) toggleMic(); // avoid sending mic audio + typed text at the same time
+  addMsg('user', text);
+  ws.send(JSON.stringify({
+    clientContent: {
+      turns: [{ role: 'user', parts: [{ text }] }],
+      turnComplete: true
+    }
+  }));
+  input.value = '';
+}
+ 
 buildBar();
 $('mic-btn').onclick = toggleMic;
-
+$('send-btn').onclick = sendText;
+$('text-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendText(); });
+ 
 const saved = localStorage.getItem('gem_k');
 if (saved) $('api-key').value = saved;
-
+ 
 $('api-key').addEventListener('keydown', e => { if (e.key === 'Enter') $('start-btn').click(); });
-
+ 
 $('start-btn').onclick = () => {
   apiKey = $('api-key').value.trim();
   if (!apiKey) { $('api-key').focus(); return; }
@@ -628,3 +711,4 @@ $('start-btn').onclick = () => {
 </script>
 </body>
 </html>
+ 
