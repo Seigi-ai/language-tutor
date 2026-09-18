@@ -56,11 +56,6 @@ input.field:focus { border-color:var(--accent); }
 .header {
   display:flex; align-items:center; justify-content:space-between;
   padding:14px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
-      <div class="header-right">
-      <button class="fc-btn" id="fc-open-btn" disabled title="Flashcards">
-        🗂️ cards<span class="fc-count" id="fc-count" style="display:none">0</span>
-      </button>
-    </div>
 }
 .header-left { display:flex; align-items:center; gap:12px; }
 .header-title { font-family:'Shippori Mincho',serif; font-size:24px; font-weight:700; color:#fff; }
@@ -256,11 +251,15 @@ input.field:focus { border-color:var(--accent); }
   </div>
 </div>
  
-<div id="app" style="display:none">
   <div class="header">
     <div class="header-left">
       <div class="header-title">言語</div>
       <div class="status-pill"><div class="dot" id="dot"></div><span id="status-text">idle</span></div>
+    </div>
+    <div class="header-right">
+      <button class="fc-btn" id="fc-open-btn" disabled title="Flashcards">
+        🗂️ cards<span class="fc-count" id="fc-count" style="display:none">0</span>
+      </button>
     </div>
   </div>
   <div class="lang-bar" id="lang-bar"></div>
