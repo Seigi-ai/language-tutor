@@ -56,6 +56,11 @@ input.field:focus { border-color:var(--accent); }
 .header {
   display:flex; align-items:center; justify-content:space-between;
   padding:14px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+      <div class="header-right">
+      <button class="fc-btn" id="fc-open-btn" disabled title="Flashcards">
+        🗂️ cards<span class="fc-count" id="fc-count" style="display:none">0</span>
+      </button>
+    </div>
 }
 .header-left { display:flex; align-items:center; gap:12px; }
 .header-title { font-family:'Shippori Mincho',serif; font-size:24px; font-weight:700; color:#fff; }
@@ -162,6 +167,80 @@ input.field:focus { border-color:var(--accent); }
   cursor:pointer; flex-shrink:0; transition:opacity .2s;
 }
 .send-btn:active { opacity:.8; }
+.header-right { display:flex; align-items:center; gap:8px; }
+.fc-btn {
+  display:flex; align-items:center; gap:6px; padding:6px 12px;
+  border-radius:20px; border:1px solid var(--border); background:transparent;
+  color:var(--dim); font-family:'Space Mono',monospace; font-size:11px;
+  cursor:pointer; transition:all .2s;
+}
+.fc-btn:not(:disabled):hover { border-color:var(--accent); color:var(--accent); }
+.fc-btn:disabled { opacity:.35; cursor:not-allowed; }
+.fc-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:16px; height:16px; padding:0 4px; border-radius:8px;
+  background:var(--accent); color:#fff; font-size:9px;
+}
+#fc-panel {
+  position:fixed; inset:0; background:rgba(7,7,14,.92); backdrop-filter:blur(4px);
+  z-index:90; display:none; flex-direction:column;
+}
+.fc-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.fc-title { font-family:'Shippori Mincho',serif; font-size:20px; color:#fff; }
+.fc-close {
+  background:transparent; border:1px solid var(--border); border-radius:50%;
+  width:30px; height:30px; color:var(--dim); cursor:pointer; font-size:14px;
+}
+.fc-toolbar {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+}
+.fc-modes { display:flex; gap:6px; }
+.fc-mode-btn {
+  padding:6px 12px; border-radius:20px; border:1px solid var(--border);
+  background:transparent; color:var(--dim); font-family:'Space Mono',monospace;
+  font-size:11px; cursor:pointer;
+}
+.fc-mode-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.fc-gen-btn {
+  padding:6px 14px; border-radius:20px; border:none; background:var(--accent);
+  color:#fff; font-family:'Space Mono',monospace; font-size:11px; cursor:pointer;
+}
+.fc-gen-btn:disabled { opacity:.5; cursor:wait; }
+.fc-body {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:24px; gap:18px; overflow-y:auto;
+}
+.fc-empty { color:var(--dim); text-align:center; font-size:12px; line-height:1.8; max-width:280px; }
+.fc-card {
+  width:100%; max-width:340px; min-height:200px; border-radius:16px;
+  border:1px solid var(--border); background:var(--card); padding:24px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:10px; cursor:pointer; user-select:none;
+}
+.fc-card .fc-phrase { font-size:22px; color:#fff; line-height:1.4; }
+.fc-card .fc-translation { font-size:14px; color:var(--accent); display:none; }
+.fc-card .fc-note { font-size:11px; color:var(--dim); display:none; line-height:1.6; }
+.fc-card.flipped .fc-translation, .fc-card.flipped .fc-note { display:block; }
+.fc-card .fc-hint { font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); margin-top:6px; }
+.fc-nav { display:flex; align-items:center; gap:16px; }
+.fc-nav-btn {
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+  background:transparent; color:var(--text); cursor:pointer; font-size:14px;
+}
+.fc-nav-btn:disabled { opacity:.3; cursor:not-allowed; }
+.fc-progress { font-size:10px; color:var(--dim); letter-spacing:.1em; }
+.fc-quiz-actions { display:flex; gap:10px; }
+.fc-quiz-btn {
+  padding:10px 18px; border-radius:10px; border:1px solid var(--border);
+  background:transparent; color:var(--text); font-family:'Space Mono',monospace;
+  font-size:12px; cursor:pointer;
+}
+.fc-quiz-btn.miss { border-color:rgba(248,113,113,.4); color:var(--red); }
+.fc-quiz-btn.got { border-color:rgba(74,222,128,.4); color:var(--green); }
 </style>
 </head>
 <body>
@@ -205,6 +284,20 @@ input.field:focus { border-color:var(--accent); }
       </svg>
     </button>
     <div class="mic-label" id="mic-label">tap to speak</div>
+  </div>
+    <div id="fc-panel">
+    <div class="fc-header">
+      <div class="fc-title">🗂️ Flashcards</div>
+      <button class="fc-close" id="fc-close-btn">✕</button>
+    </div>
+    <div class="fc-toolbar">
+      <div class="fc-modes">
+        <button class="fc-mode-btn active" id="fc-mode-browse">Browse</button>
+        <button class="fc-mode-btn" id="fc-mode-quiz">Quiz me</button>
+      </div>
+      <button class="fc-gen-btn" id="fc-gen-btn">Generate from conversation</button>
+    </div>
+    <div class="fc-body" id="fc-body"></div>
   </div>
 </div>
  
@@ -442,6 +535,10 @@ let apiKey = '', ws = null, inCtx = null, outCtx = null;
 let micStream = null, worklet = null, src = null;
 let micOn = false, wsReady = false, playAt = 0, pendingReconnect = false;
 let curLang = 'japanese', curAiEl = null, curAiChunks = [];
+let transcriptLog = [], curAiText = '';
+let flashcards = [], fcMode = 'browse', fcIndex = 0, fcBusy = false;
+let quizOrder = [], quizPos = 0, quizScore = 0, quizRevealed = false;
+const FC_MODEL = 'gemini-3.5-flash';
  
 const $ = id => document.getElementById(id);
  
@@ -467,6 +564,7 @@ function switchLang(k) {
   curLang = k; buildBar();
   const nt = $('native-text'); if (nt) nt.textContent = LANGS[k].native;
   clearTranscript(); playAt = 0;
+  transcriptLog = []; curAiText = ''; updateFcButton();
   if (ws && ws.readyState === WebSocket.OPEN) {
     pendingReconnect = true; ws.close();
   } else { ws = null; connect(); }
@@ -491,7 +589,10 @@ function addMsg(role, text) {
   const d = document.createElement('div');
   d.className = 'msg ' + role;
   d.innerHTML = `<div class="msg-who">${role === 'user' ? 'you' : LANGS[curLang].name + ' tutor'}</div>${text}`;
-  t.appendChild(d); t.scrollTop = t.scrollHeight; return d;
+  t.appendChild(d); t.scrollTop = t.scrollHeight;
+  transcriptLog.push({ role, text });
+  updateFcButton();
+  return d;
 }
  
 function startAiMsg() {
@@ -507,12 +608,14 @@ function startAiMsg() {
 function appendAi(text) {
   if (!curAiEl) startAiMsg();
   curAiEl.querySelector('.body').textContent += text;
+  curAiText += text;
   $('transcript').scrollTop = $('transcript').scrollHeight;
 }
- 
+
 function endAiMsg() {
   if (curAiEl && curAiChunks.length) addReplayButton(curAiEl, curAiChunks.slice());
-  curAiEl = null; curAiChunks = [];
+  if (curAiText.trim()) { transcriptLog.push({ role: 'ai', text: curAiText }); updateFcButton(); }
+  curAiEl = null; curAiChunks = []; curAiText = '';
 }
  
 function connect() {
@@ -689,12 +792,163 @@ function sendText() {
   }));
   input.value = '';
 }
- 
+function updateFcButton() {
+  const hasContent = transcriptLog.some(m => m.role === 'ai' && m.text.trim());
+  const btn = $('fc-open-btn');
+  if (btn) btn.disabled = !hasContent && flashcards.length === 0;
+  const badge = $('fc-count');
+  if (badge) {
+    if (flashcards.length) { badge.style.display = 'inline-flex'; badge.textContent = flashcards.length; }
+    else badge.style.display = 'none';
+  }
+}
+
+function openFlashcards() { $('fc-panel').style.display = 'flex'; renderFcBody(); }
+function closeFlashcards() { $('fc-panel').style.display = 'none'; }
+
+function setFcMode(mode) {
+  fcMode = mode;
+  $('fc-mode-browse').classList.toggle('active', mode === 'browse');
+  $('fc-mode-quiz').classList.toggle('active', mode === 'quiz');
+  if (mode === 'quiz') startQuiz();
+  renderFcBody();
+}
+
+async function generateFlashcards() {
+  if (fcBusy) return;
+  const convo = transcriptLog.filter(m => m.text.trim());
+  if (!convo.length) { alert("Talk a bit first so there's something to pull flashcards from."); return; }
+  if (!apiKey) { alert('No API key set.'); return; }
+
+  fcBusy = true;
+  const btn = $('fc-gen-btn');
+  const prevLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Generating…';
+
+  const transcriptText = convo.map(m => `${m.role === 'user' ? 'Learner' : LANGS[curLang].name + ' tutor'}: ${m.text}`).join('\n');
+  const prompt = `You are building study flashcards from a transcript of a spoken ${LANGS[curLang].name} lesson.
+Pick out ${LANGS[curLang].name} words or phrases genuinely worth reviewing: new vocabulary the tutor introduced, corrections the tutor made to the learner's mistakes, or phrases the learner clearly stumbled on. Skip greetings and filler.
+Return ONLY a JSON array (max 12 items), each item: {"phrase": "<word or phrase in ${LANGS[curLang].name}>", "translation": "<English meaning>", "note": "<one short sentence on usage or why it matters>"}.
+If there's nothing worth flashcarding, return [].
+
+TRANSCRIPT:
+${transcriptText}`;
+
+  try {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${FC_MODEL}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' }
+      })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const parsed = JSON.parse(raw);
+    const existing = new Set(flashcards.map(c => c.phrase.toLowerCase().trim()));
+    let added = 0;
+    for (const c of parsed) {
+      if (!c?.phrase || !c?.translation) continue;
+      const key = c.phrase.toLowerCase().trim();
+      if (existing.has(key)) continue;
+      existing.add(key);
+      flashcards.push({ phrase: c.phrase, translation: c.translation, note: c.note || '', lang: curLang });
+      added++;
+    }
+    if (!added) alert('No new flashcard-worthy phrases found yet — keep chatting and try again.');
+  } catch (err) {
+    console.error('generateFlashcards error:', err);
+    alert('Could not generate flashcards: ' + err.message);
+  } finally {
+    fcBusy = false;
+    btn.disabled = false; btn.textContent = prevLabel;
+    updateFcButton();
+    fcIndex = Math.min(fcIndex, Math.max(0, flashcards.length - 1));
+    renderFcBody();
+  }
+}
+
+function renderFcBody() {
+  const body = $('fc-body');
+  if (!flashcards.length) {
+    body.innerHTML = `<div class="fc-empty">No flashcards yet.<br>Have a bit of conversation, then tap "Generate from conversation" to pull vocab worth reviewing.</div>`;
+    return;
+  }
+  if (fcMode === 'quiz') renderQuiz(); else renderBrowse();
+}
+
+function renderBrowse() {
+  const body = $('fc-body');
+  const c = flashcards[fcIndex];
+  body.innerHTML = `
+    <div class="fc-card" id="fc-card">
+      <div class="fc-phrase">${c.phrase}</div>
+      <div class="fc-translation">${c.translation}</div>
+      ${c.note ? `<div class="fc-note">${c.note}</div>` : ''}
+      <div class="fc-hint">tap to flip</div>
+    </div>
+    <div class="fc-nav">
+      <button class="fc-nav-btn" id="fc-prev" ${fcIndex === 0 ? 'disabled' : ''}>‹</button>
+      <div class="fc-progress">${fcIndex + 1} / ${flashcards.length}</div>
+      <button class="fc-nav-btn" id="fc-next" ${fcIndex === flashcards.length - 1 ? 'disabled' : ''}>›</button>
+    </div>`;
+  $('fc-card').onclick = () => $('fc-card').classList.toggle('flipped');
+  $('fc-prev').onclick = () => { fcIndex--; renderBrowse(); };
+  $('fc-next').onclick = () => { fcIndex++; renderBrowse(); };
+}
+
+function startQuiz() {
+  quizOrder = flashcards.map((_, i) => i).sort(() => Math.random() - 0.5);
+  quizPos = 0; quizScore = 0; quizRevealed = false;
+}
+
+function renderQuiz() {
+  const body = $('fc-body');
+  if (!quizOrder.length) startQuiz();
+  if (quizPos >= quizOrder.length) {
+    body.innerHTML = `
+      <div class="fc-empty">Quiz complete!<br>Score: ${quizScore} / ${quizOrder.length}</div>
+      <button class="fc-quiz-btn" id="fc-requiz">Quiz me again</button>`;
+    $('fc-requiz').onclick = () => { startQuiz(); renderQuiz(); };
+    return;
+  }
+  const c = flashcards[quizOrder[quizPos]];
+  body.innerHTML = `
+    <div class="fc-progress">card ${quizPos + 1} / ${quizOrder.length} &nbsp;·&nbsp; score ${quizScore}</div>
+    <div class="fc-card" id="fc-card">
+      <div class="fc-phrase">${c.phrase}</div>
+      <div class="fc-translation">${c.translation}</div>
+      ${c.note ? `<div class="fc-note">${c.note}</div>` : ''}
+      ${quizRevealed ? '' : '<div class="fc-hint">tap to reveal</div>'}
+    </div>
+    ${quizRevealed ? `
+      <div class="fc-quiz-actions">
+        <button class="fc-quiz-btn miss" id="fc-miss">Missed it</button>
+        <button class="fc-quiz-btn got" id="fc-got">Got it</button>
+      </div>` : ''}`;
+  const card = $('fc-card');
+  if (!quizRevealed) {
+    card.onclick = () => { quizRevealed = true; renderQuiz(); };
+  } else {
+    card.classList.add('flipped');
+    $('fc-miss').onclick = () => { quizPos++; quizRevealed = false; renderQuiz(); };
+    $('fc-got').onclick = () => { quizScore++; quizPos++; quizRevealed = false; renderQuiz(); };
+  }
+}
+  
+  
 buildBar();
 $('mic-btn').onclick = toggleMic;
 $('send-btn').onclick = sendText;
 $('text-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendText(); });
- 
+$('fc-open-btn').onclick = openFlashcards;
+$('fc-close-btn').onclick = closeFlashcards;
+$('fc-mode-browse').onclick = () => setFcMode('browse');
+$('fc-mode-quiz').onclick = () => setFcMode('quiz');
+$('fc-gen-btn').onclick = generateFlashcards;
+  
 const saved = localStorage.getItem('gem_k');
 if (saved) $('api-key').value = saved;
  
